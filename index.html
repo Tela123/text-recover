@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OCR OFFLINE V2</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+body{font-family:system-ui;background:#0f172a;color:#fff;padding:12px}
+.card{background:#1e293b;border-radius:16px;padding:14px;margin-bottom:12px}
+button{background:#38bdf8;color:#000;border:0;padding:14px;border-radius:12px;width:100%;font-weight:800;font-size:17px}
+#preview{max-width:100%;border-radius:12px;margin:8px 0;display:none}
+#resultat{white-space:pre-wrap;background:#020617;padding:12px;border-radius:10px;min-height:100px}
+</style>
+</head>
+<body>
+<div class="card">
+<h2>📸 OCR OFFLINE V2</h2>
+<p id="etat">Prêt - Nécessite internet la 1ère fois seulement</p>
+<input type="file" id="file" accept="image/*">
+<img id="preview">
+<p id="status">En attente</p>
+<button onclick="extraire()">EXTRAIRE</button>
+<progress id="prog" value="0" max="100" style="width:100%;display:none"></progress>
+</div>
+<div class="card">
+<div id="resultat">Texte ici...</div>
+<button onclick="navigator.clipboard.writeText(resultat.innerText);alert('Copié')" style="background:#22c55e;margin-top:8px">Copier</button>
+</div>
+
+<script>
+let f=null;
+file.onchange=e=>{f=e.target.files[0];preview.src=URL.createObjectURL(f);preview.style.display='block';status.innerText='Image prête';};
+
+async function extraire(){
+ if(!f){alert('Choisis une image');return;}
+ prog.style.display='block';
+ try{
+   status.innerText='⏳ Chargement... patiente 10s la 1ère fois';
+   const worker = await Tesseract.createWorker('fra',1,{
+     logger:m=>{
+       console.log(m);
+       if(m.progress){prog.value=m.progress*100; status.innerText=m.status+' '+Math.round(m.progress*100)+'%';}
+     }
+   });
+   status.innerText='🔍 Lecture...';
+   const ret = await worker.recognize(f);
+   resultat.innerText=ret.data.text;
+   status.innerText='✅ Terminé! Maintenant tu peux couper internet, ça restera en mémoire';
+   document.getElementById('etat').innerText='✅ Installé - Prochaine fois fonctionne en MODE AVION';
+   await worker.terminate();
+   prog.style.display='none';
+ }catch(err){
+   status.innerText='❌ ERREUR: '+err.message;
+   alert('Erreur: '+err.message+'\n\n1. Active les données mobiles 2 min\n2. Réessaie\n3. Si tu es sur file:// essaie de louvrir via http:// : Dans Acode, clique sur les 3 points > Run > Preview');
+   prog.style.display='none';
+ }
+}
+</script>
+</body>
+</html>
